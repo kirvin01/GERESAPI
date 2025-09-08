@@ -1,5 +1,5 @@
 # Entorno virtual
-venc/
+venv/
 env/
 
 # Archivos compilados de Python
