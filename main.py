@@ -5,22 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from typing import Dict, Any
+from decouple import config, Csv
 
 # Importa el motor, no la clase
 from conexion import engine
 
 app = FastAPI(
-    title="GERESAPI",
-    description="API para consultas a la base de datos de GERESA.",
-    version="1.0.0"
+    title=config('APP_TITLE', default='GERESAPI'),
+    description=config('APP_DESCRIPTION', default='API para consultas a la base de datos de GERESA.'),
+    version=config('APP_VERSION', default='1.0.0')
 )
 
 # Configuración de CORS
-origins = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://192.168.0.83:5173",
-]
+origins = config('CORS_ORIGINS', default='http://localhost:5173', cast=Csv())
 
 app.add_middleware(
     CORSMiddleware,
