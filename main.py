@@ -1,11 +1,18 @@
 # main.py
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from typing import Dict, Any
 from decouple import config, Csv
+from fastapi.responses import StreamingResponse
+import io
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from datetime import datetime
 
 # Importa el motor, no la clase
 from conexion import engine
@@ -107,4 +114,111 @@ def get_atenciones(anio: int, ndoc: str, db: Connection = Depends(get_db_connect
         raise HTTPException(status_code=500, detail=str(e))
        
 
+
+@app.get("/certificado/", summary="Generar un certificado en PDF")
+def generar_certificado(
+    nombre: str = Query(..., description="Nombre completo de la persona"),
+    calidad: str = Query(..., description="Calidad en la que se otorga el certificado (ej. Ponente, Asistente)"),
+    fecha: str = Query(..., description="Fecha del evento o certificado"),
+    folio: str = Query(..., description="Folio del certificado"),
+    numero: str = Query(..., description="Número o código del certificado")
+):
+    try:
+        template_path = "plantillas/certificado.pdf"
+        template_pdf_reader = PdfReader(template_path)
+
+        if len(template_pdf_reader.pages) < 2:
+            raise HTTPException(status_code=400, detail="La plantilla del certificado debe tener al menos 2 páginas.")
+
+        output = PdfWriter()
+
+        # --- PÁGINA 1: Nombre, Calidad, Fecha ---
+        packet1 = io.BytesIO()
+        page1_template = template_pdf_reader.pages[0]
+        page1_width = float(page1_template.mediabox.width)
+        page1_height = float(page1_template.mediabox.height)
+        
+        can1 = canvas.Canvas(packet1, pagesize=(page1_width, page1_height))
+        
+        # --- Ejemplo de personalización para el NOMBRE ---
+        can1.setFont("Helvetica-Bold", 22)  # Fuente Negrita, Tamaño 24
+        can1.setFillColor(colors.darkblue) # Color azul oscuro
+        can1.drawString(250, 340, nombre)
+
+        can1.setFont("Helvetica-Bold", 16)  # Fuente Negrita, Tamaño 24
+        can1.setFillColor(colors.black) # Color azul oscuro        
+        can1.drawString(130, 300,f"En calidad de {calidad}:")
+
+        # --- Restaurar a valores por defecto para los siguientes textos ---
+        can1.setFont("Helvetica-Bold", 12) # Fuente normal, Tamaño 12
+        can1.setFillColor(colors.black) # Color negro
+
+        fecha_obj = datetime.strptime(fecha, "%d-%m-%Y")
+        meses = {
+            1: "enero",
+            2: "febrero",
+            3: "marzo",
+            4: "abril",
+            5: "mayo",
+            6: "junio",
+            7: "julio",
+            8: "agosto",
+            9: "septiembre",
+            10: "octubre",
+            11: "noviembre",
+            12: "diciembre"
+        }
+
+        can1.drawString(600, 105, f"Cusco, {fecha_obj.day} de {meses[fecha_obj.month]} {fecha_obj.year}")
+        
+        can1.save()
+        packet1.seek(0)
+        
+        overlay_pdf1 = PdfReader(packet1)
+        page1_template.merge_page(overlay_pdf1.pages[0])
+        output.add_page(page1_template)
+
+        # --- PÁGINA 2: Folio, Numero ---
+        packet2 = io.BytesIO()
+        page2_template = template_pdf_reader.pages[1]
+        page2_width = float(page2_template.mediabox.width)
+        page2_height = float(page2_template.mediabox.height)
+
+        can2 = canvas.Canvas(packet2, pagesize=(page2_width, page2_height))
+
+        # --- Ejemplo de personalización para Folio y Número ---
+        can2.setFont("Courier-Oblique", 10) # Fuente Cursiva, Tamaño 10
+        can2.setFillColor(colors.black) # Color gris
+        
+        can2.drawString(290, 465, folio)
+        can2.drawString(105, 465, numero)
+        can2.drawString(120, 410, fecha)
+        
+        can2.save()
+        packet2.seek(0)
+
+        overlay_pdf2 = PdfReader(packet2)
+        page2_template.merge_page(overlay_pdf2.pages[0])
+        output.add_page(page2_template)
+
+        # Añadir el resto de las páginas de la plantilla si existen
+        for i in range(2, len(template_pdf_reader.pages)):
+            output.add_page(template_pdf_reader.pages[i])
+
+        # --- Guardar y devolver el PDF final ---
+        output_stream = io.BytesIO()
+        output.write(output_stream)
+        output_stream.seek(0)
+        
+        return StreamingResponse(
+            output_stream,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=certificado_{calidad}_{numero}.pdf"}#inline attachment
+        )
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"No se encontró la plantilla del certificado en '{template_path}'")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {e}")
+    #http://127.0.0.1:8000/certificado/?nombre=Juan%20Perez&calidad=Asistente&fecha=13-10-2025&folio=A-001&numero=12345
 
