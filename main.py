@@ -147,7 +147,7 @@ def generar_certificado(
 
         can1.setFont("Helvetica-Bold", 16)  # Fuente Negrita, Tamaño 24
         can1.setFillColor(colors.black) # Color azul oscuro        
-        can1.drawString(130, 300,f"{calidad}:")
+        can1.drawString(130, 300,f"En calidad de {calidad}:")
 
         # --- Restaurar a valores por defecto para los siguientes textos ---
         can1.setFont("Helvetica-Bold", 12) # Fuente normal, Tamaño 12
