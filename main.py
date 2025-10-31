@@ -124,7 +124,7 @@ def generar_certificado(
     numero: str = Query(..., description="Número o código del certificado")
 ):
     try:
-        template_path = "plantillas/certificado.pdf"
+        template_path = "Plantillas/certificado.pdf"
         template_pdf_reader = PdfReader(template_path)
 
         if len(template_pdf_reader.pages) < 2:
@@ -147,7 +147,7 @@ def generar_certificado(
 
         can1.setFont("Helvetica-Bold", 16)  # Fuente Negrita, Tamaño 24
         can1.setFillColor(colors.black) # Color azul oscuro        
-        can1.drawString(130, 300,f"En calidad de {calidad}:")
+        can1.drawString(130, 300,f"{calidad}:")
 
         # --- Restaurar a valores por defecto para los siguientes textos ---
         can1.setFont("Helvetica-Bold", 12) # Fuente normal, Tamaño 12
@@ -213,7 +213,7 @@ def generar_certificado(
         return StreamingResponse(
             output_stream,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=certificado_{calidad}_{numero}.pdf"}#inline attachment
+            headers={"Content-Disposition": f"inline; filename=certificado_{calidad}_{numero}.pdf"}#inline attachment
         )
 
     except FileNotFoundError:
