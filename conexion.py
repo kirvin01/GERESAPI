@@ -13,7 +13,7 @@ def create_db_engine():
         password = config('DB_PASSWORD')
         database = config('DB_DATABASE')
         port = config('DB_PORT')
-        driver = 'ODBC Driver 17 for SQL Server'
+        driver = 'ODBC Driver 18 for SQL Server'
 
         params = urllib.parse.quote_plus(
             f"DRIVER={{{driver}}};"

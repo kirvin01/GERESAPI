@@ -213,7 +213,7 @@ def generar_certificado(
         return StreamingResponse(
             output_stream,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"inline; filename=certificado_{calidad}_{numero}.pdf"}#inline attachment
+            headers={"Content-Disposition": f"attachment; filename=certificado_{calidad}_{numero}.pdf"}#inline attachment
         )
 
     except FileNotFoundError:
